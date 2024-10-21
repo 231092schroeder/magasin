@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu</title>
+</head>
+<body>
+    <h1>Menu</h1>
+    <div id="menu-container"></div>
+    <script>
+        // Função para obter o token JWT do localStorage
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        // Função para exibir o menu
+        function displayMenu(items) {
+            const menuContainer = document.getElementById('menu-container');
+            menuContainer.innerHTML = ''; // Limpar o conteúdo anterior
+
+            items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.innerHTML = `
+                    <h3>${item.name}</h3>
+                    <p>${item.description}</p>
+                    <p>Price: $${item.price}</p>
+                    <input type="number" id="quantity-${item._id}" value="1" min="1">
+                    <button onclick="addToCart('${item._id}', ${item.price}, '${item.name}')">Add to Cart</button>
+                `;
+                menuContainer.appendChild(itemDiv);
+            });
+        }
+
+        // Função para adicionar item ao carrinho
+        function addToCart(itemId, price, name) {
+            const token = getToken();
+            if (!token) {
+                alert('Você precisa estar logado para adicionar itens ao carrinho.');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            const quantity = document.getElementById(`quantity-${itemId}`).value;
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+            // Verifica se o item já está no carrinho
+            const existingItem = cart.find(item => item.id === itemId);
+            if (existingItem) {
+                existingItem.quantity += parseInt(quantity);
+            } else {
+                cart.push({
+                    id: itemId,
+                    name,
+                    price,
+                    quantity: parseInt(quantity)
+                });
+            }
+
+            localStorage.setItem('cart', JSON.stringify(cart));
+            alert('Item adicionado ao carrinho!');
+        }
+
+        // Função para visualizar o carrinho
+        function viewCart() {
+            window.location.href = '/cart.html';
+        }
+
+        // Carregar o menu quando a página é carregada
+        window.onload = async () => {
+            try {
+                const response = await fetch('/menu');
+                const items = await response.json();
+                displayMenu(items);
+                
+                // Verifica se a URL contém o parâmetro de status do pagamento
+                const urlParams = new URLSearchParams(window.location.search);
+                const paymentStatus = urlParams.get('payment_status');
+                
+                if (paymentStatus === 'success') {
+                    alert('Solicitação realizada com sucesso');
+                } else if (paymentStatus === 'cancel') {
+                    alert('Pagamento cancelado');
+                }
+            } catch (error) {
+                console.error('Error fetching menu:', error);
+            }
+        }
+    </script>
+    <button id="view-cart" onclick="viewCart()">Ver Carrinho</button>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Checkout</title>
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+  <h1>Checkout</h1>
+  <form id="payment-form">
+    <div id="card-element"></div>
+    <button type="submit">Pagar</button>
+  </form>
+
+  <script>
+    const stripe = Stripe('sua-chave-publica-do-stripe');
+    const elements = stripe.elements();
+    const card = elements.create('card');
+    card.mount('#card-element');
+
+    document.getElementById('payment-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const { token, error } = await stripe.createToken(card);
+      if (error) {
+        alert(error.message);
+      } else {
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        const total = cart.reduce((sum, item) => sum + item.price, 0) * 100; // Convert to cents
+
+        const response = await fetch('/payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': localStorage.getItem('token')
+          },
+          body: JSON.stringify({ amount: total, token: token.id })
+        });
+
+        if (response.ok) {
+          alert('Pagamento realizado com sucesso!');
+          localStorage.removeItem('cart');
+          window.location.href = '/menu.html';
+        } else {
+          alert('Falha no pagamento!');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

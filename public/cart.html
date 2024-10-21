@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart</title>
+    <script src="https://js.stripe.com/v3/"></script> <!-- Stripe library -->
+</head>
+<body>
+    <h1>Cart</h1>
+    <div id="cart"></div>
+    <div id="payment-form"></div>
+    <button id="place-order" onclick="createPaymentIntent()">Place Order</button>
+
+    <script>
+        // Função para exibir o carrinho
+        function displayCart() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            console.log("Exibindo carrinho:", cart);
+            const cartDiv = document.getElementById('cart');
+            cartDiv.innerHTML = '';
+            cart.forEach(item => {
+                console.log("Exibindo item:", item);
+
+                const itemDiv = document.createElement('div');
+                itemDiv.innerHTML = `
+                    <h3>${item.name}</h3>
+                    <p>Price: $${item.price}</p>
+                    <p>Total: $${item.price * item.quantity}</p>
+                    <p>Massa: ${item.massa}</p>
+                    <p>Recheio: ${item.recheio}</p>
+                    <p>Cobertura: ${item.cobertura}</p>
+                    <p>Observação: ${item.observacao}</p>
+                    <label for="quantity-${item.id}">Quantity:</label>
+                    <input type="number" id="quantity-${item.id}" value="${item.quantity}" min="1" />
+                    <button onclick="updateQuantity('${item.id}')">Update Quantity</button>
+                    <button onclick="removeFromCart('${item.id}')">Remove</button>
+                `;
+                cartDiv.appendChild(itemDiv);
+            });
+        }
+
+        // Função para atualizar a quantidade de itens no carrinho
+        function updateQuantity(itemId) {
+            const quantityInput = document.getElementById(`quantity-${itemId}`);
+            const newQuantity = parseInt(quantityInput.value, 10);
+            if (isNaN(newQuantity) || newQuantity <= 0) {
+                alert('Please enter a valid quantity.');
+                return;
+            }
+
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            console.log("Carrinho antes da atualização:", cart);
+
+            const updatedCart = cart.map(item => {
+                if (item.id === itemId) {
+                    return { ...item, quantity: newQuantity };
+                }
+                return item;
+            });
+
+            console.log("Carrinho depois da atualização:", updatedCart);
+
+            localStorage.setItem('cart', JSON.stringify(updatedCart));
+            displayCart();
+            alert('Quantity updated successfully');
+        }
+
+        // Função para remover item do carrinho
+        function removeFromCart(itemId) {
+            if (!itemId) {
+                console.error("ID do item não fornecido.");
+                return;
+            }
+
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            console.log("Carrinho antes da remoção:", cart);
+
+            const updatedCart = cart.filter(item => item.id !== itemId);
+
+            console.log("Carrinho depois da remoção:", updatedCart);
+
+            localStorage.setItem('cart', JSON.stringify(updatedCart));
+            displayCart();
+            alert('Item removed successfully');
+        }
+        
+        
+        // Função para criar o Payment Intent com Stripe
+        async function createPaymentIntent() {
+            try {
+                const cart = JSON.parse(localStorage.getItem('cart')) || [];
+                const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+                const response = await fetch('/create-payment-intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ total })
+                });
+        
+                const { url } = await response.json(); // Obtenha a URL do checkout
+        
+                // Redireciona o cliente para a URL de checkout
+                window.location.href = url;
+        
+            } catch (error) {
+                console.error('Erro ao processar pagamento:', error);
+                alert('Erro ao iniciar o pagamento');
+            }
+        }
+                
+        displayCart();
+        
+
+        
+    </script>
+</body>
+</html>
